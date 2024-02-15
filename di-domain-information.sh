@@ -189,6 +189,7 @@ resolving_record_SOA=$(cat SOA_lookup_di)
 resolving_record_MX=$(cat MX_lookup_di)
 
 # Performs some more lookups and saves them to temp files
+# We only want the IPs so we grep only for them using some regex
 dig +short $resolving_record_MX $nameserver A 2>/dev/null > mx_host_di_lookup_di & mxWait=$!
 dig +short -x $(egrep -o '([0-9]{1,3}\.){3}[0-9]{1,3}' A_lookup_di) 2>/dev/null > server_host_di & lookup1=$!
 dig +short -x $(egrep -o '([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}' A_lookup_di) 2>/dev/null > server_AAAA_host_di & lookup2=$!
@@ -244,7 +245,7 @@ whois_filter=$(egrep "(Registrar|Registry) WHOIS Server: \
     echo -e "  ${RED}ROOT DOMAIN NOT FOUND! Continuing in case of sub domain...${END}"
     exit
   fi
-  # Checks if it is a .uk domain - if so change how it grabs the correct info from the WHOIS
+  # Checks if it is a .uk domain - if so it changes how it grabs the correct info from the WHOIS as .UK domains display the data differently
   if [[ $isRootDomain == 1 ]] && [[ ${tld} == *"uk" ]] && ! [[ -z $whois_output ]]; then
     echo -e $(awk -F: '/URL:/ && $0 != ""  { REGURL=$0 } END { print REGURL }' whois_output_di \
     | sed -r 's|(.*)|\1|' | sed 's|URL:|\\e[32mRegistrar URL:\\e[0m|g') | sed -r 's|^(.*)$|  \1|'
@@ -291,6 +292,7 @@ whois_filter=$(egrep "(Registrar|Registry) WHOIS Server: \
       | GREP_COLOR='01;32' egrep '(Registrar:|Registrar Name:)|(VentraIP|Synergy) Wholesale|$' \
       | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | sed -r 's|^(.*)$|  \1|'
     fi
+    # Colours any relevant statuses on the domain
     echo -e "${whois_filter}" \
     | sed -e 's|DNSSEC: Inactive|DNSSEC: unsigned|g' \
     | sed -e 's|DNSSEC: Active|DNSSEC: signedDelegation|g' \
@@ -311,6 +313,9 @@ whois_filter=$(egrep "(Registrar|Registry) WHOIS Server: \
 
   ns_check=$(cat NS_lookup_di)
   # Checks the nameservers set at the registry and compares to what is shown from a DIG
+  # This is an important check as if the IPs the nameservers set on the registry dont match those when appearing on a DIG - it can cause issues with DNS propagation. 
+  # If they dont match, it will colour the nameservers set on the registry as RED to indicate an issue
+  
   for var in ${ns_lookup_di[@]}; do
     dig +short ${var} A
   done > ns1_output_di & NS_wait1=$!
@@ -361,7 +366,7 @@ fi
 egrep "Registrant (ID:|Email:) \
 |Eligibility (ID:|Type:|Name)" whois_output_di 2>/dev/null > whois_filter_output_di
 
-  # Function for getting the status from the ABR lookup
+ # Function for getting the status from the ABR lookup
  function abn_info () {
    sed -r 's/[ \t]*//g' registrant_output_di \
    | sed -r 's/(.*:[A-Z]*)//g' \
@@ -727,6 +732,7 @@ function management_urls () {
 #          Puts it all together and prints output all at once         #
 #######################################################################
 
+# Runs all the different functions at once in the background - this significantly improves the time to execute the whole script
 management_urls > management_urls_output_di & End1=$!
 whois_info > whois_info_output_di & End2=$!
 reg_info > reg_info_output_di $ End3=$!
