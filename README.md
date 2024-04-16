@@ -5,11 +5,11 @@ It will colour any DNS results that resolve to one of Nexigen Digital or one of 
 If the server any of the domains DNS resolves to is owned by Nexigen Digital or one of its child companies - it will generate cPanel and WHM logins.
 
 If the domain is registered to Synergy Wholesale, it will generate a link to the domain in Synergy Wholesales management system.
+```
+usage: di [-h] [-v] [-q] domain
 
-	Available arguments:
-	-h         Show brief help
-	-v         Show verbose output
-	-q         Skip non-critical checks & URL generation
-
-
-
+options:
+-h         Show brief help
+-v         Show verbose output
+-q         Skip non-critical checks & URL generation
+```
