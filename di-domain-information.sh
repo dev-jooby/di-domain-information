@@ -132,6 +132,7 @@ while getopts "hqv" opt 2>/dev/null; do
   case $opt in
     h)
       echo -e "\nThis command is used to view important domain information."
+      echo -e "usage: di [-h] [-v] [-q] domain\n"
       echo -e "options:"
       echo -e "-h         Show brief help"
       echo -e "-v         Show verbose output"
@@ -160,7 +161,12 @@ shift $((OPTIND - 1))
 domain=$1
 nameserver=$2
 if [ -z "$domain" ]; then
-  echo -e "\nNo domain supplied!\n"
+  echo -e "\nNo domain supplied!"
+  echo -e "usage: di [-h] [-v] [-q] domain\n"
+  echo -e "options:"
+  echo -e "-h         Show brief help"
+  echo -e "-v         Show verbose output"
+  echo -e "-q         Skip non-critical checks & URL generation\n"
   exit 0
 fi
 strip_verify_domain $domain
