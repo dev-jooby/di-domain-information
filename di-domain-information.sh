@@ -114,6 +114,15 @@ badspf_check="spf.hostedmail.net.au"
 #                            SCRIPT START                             #
 #######################################################################
 
+# Function for help info
+function help_info {
+  echo -e "usage: di [-h] [-v] [-q] domain\n"
+  echo -e "options:"
+  echo -e "-h         Show brief help"
+  echo -e "-v         Show verbose output"
+  echo -e "-q         Skip non-critical checks & URL generation\n"
+}
+
 # Function for stripping the domain name out of a provided URL
 function strip_verify_domain {
   naive_domain_regex="^[a-zA-Z0-9\-]+(\.[a-zA-Z0-9\-]+)+$"
@@ -122,7 +131,7 @@ function strip_verify_domain {
   else
     domain=$(echo $1 | sed -r 's|^(https?://)?(www\.)?([a-zA-Z0-9\-]+(\.[a-zA-Z0-9\-]+)+)(:[0-9]+)?/?.*|\3|' | tr '[:upper:]' '[:lower:]')
   fi
-  [[ ! $domain =~ $naive_domain_regex ]] && echo -e "\nInvalid domain provided!\n" > /dev/tty  && exit 1
+  [[ ! $domain =~ $naive_domain_regex ]] && echo -e "\nInvalid domain provided!" && help_info > /dev/tty  && exit 1
 }
 
 # Sets up the available arguements that can be used
@@ -132,12 +141,7 @@ while getopts "hqv" opt 2>/dev/null; do
   case $opt in
     h)
       echo -e "\nThis command is used to view important domain information."
-      echo -e "usage: di [-h] [-v] [-q] domain\n"
-      echo -e "options:"
-      echo -e "-h         Show brief help"
-      echo -e "-v         Show verbose output"
-      echo -e "-q         Skip non-critical checks & URL generation"
-      echo
+      help_info
       exit 0
       ;;
 
@@ -162,11 +166,7 @@ domain=$1
 nameserver=$2
 if [ -z "$domain" ]; then
   echo -e "\nNo domain supplied!"
-  echo -e "usage: di [-h] [-v] [-q] domain\n"
-  echo -e "options:"
-  echo -e "-h         Show brief help"
-  echo -e "-v         Show verbose output"
-  echo -e "-q         Skip non-critical checks & URL generation\n"
+  help_info
   exit 0
 fi
 strip_verify_domain $domain
