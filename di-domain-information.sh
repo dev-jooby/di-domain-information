@@ -146,7 +146,7 @@ function whois_info () {
 while [ -e /proc/$WhoIS ]; do sleep 0.02 ; done
 whois_output=$(cat whois_output_di 2>/dev/null)
 pattern_match=$(egrep -i "$patterns" whois_output_di 2>/dev/null)
-registrar_check=$(grep -i --colour=never 'Synergy Wholesale' whois_output_di 2>/dev/null)
+registrar_check=$(grep -i --colour=never 'Synergy Wholesale' whois_output_di 2>/dev/null) # Can be updated to whatever registrar the user requires
 whois_filter=$(egrep "(Registrar|Registry) WHOIS Server: \
 |Status: \
 |Last Modified: \
@@ -214,7 +214,7 @@ whois_filter=$(egrep "(Registrar|Registry) WHOIS Server: \
       | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | sed -r 's|^(.*)$|  \1|'
 
       echo -e "$(egrep '(Registrar:|Registrar Name:)' whois_output_di)" \
-      | GREP_COLOR='01;32' egrep '(Registrar:|Registrar Name:)|(VentraIP|Synergy) Wholesale|$' \
+      | GREP_COLOR='01;32' egrep '(Registrar:|Registrar Name:)|(VentraIP|Synergy) Wholesale|$' \ # Can be updated to whatever registrar the user requires
       | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | sed -r 's|^(.*)$|  \1|'
     elif [[ ${tld} == "ai" ]]; then
       ns_lookup_di=$(egrep -i "name server:" whois_output_di | awk '{print $3}' | tr '[:lower:]' '[:upper:]' | sort)
@@ -243,7 +243,7 @@ whois_filter=$(egrep "(Registrar|Registry) WHOIS Server: \
     | GREP_COLOR='01;31' egrep 'redemptionPeriod|serverUpdateProhibited|$' \
     | GREP_COLOR='01;93' egrep 'clientRenewProhibited|$' \
     | GREP_COLOR='01;93' egrep 'server(Transfer|Delete)Prohibited|$' \
-    | GREP_COLOR='01;32' egrep '(VentraIP|Synergy) Wholesale|$' \
+    | GREP_COLOR='01;32' egrep '(VentraIP|Synergy) Wholesale|$' \ # Can be updated to whatever registrar the user requires
     | GREP_COLOR='01;32' egrep 'unsigned|$' \
     | GREP_COLOR='01;31' egrep 'signedDelegation|$' \
     | sed -E 's|([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}:[0-9]{2}:[0-9]{2})Z|\1 \2|g' \
@@ -604,6 +604,7 @@ function management_urls () {
 #     get_urls $domain $int_serv > cpanel_output_di
 #   fi
 # fi
+#--!
  # WHOIS Information we need for the Synergy URL
  while [ -e /proc/$WhoIS ]; do sleep 0.02 ; done
  registrar_check=$(grep -i --colour=never 'Synergy Wholesale' whois_output_di 2>/dev/null)
