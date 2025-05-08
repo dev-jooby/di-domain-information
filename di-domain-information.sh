@@ -16,40 +16,11 @@ function cleanup_main () {
 }
 trap cleanup_main EXIT
 
-# For generating cPanel & WHM login URL
-function get_urls () {
-domain=$1
-server=$2
-# Checks if the server is from Net Virtue which use another SSH port - if it is, changes the port in the SSH command to 4001
-if ! [[ $server == *"cpcloud"* ]]; then
-  timeout 2 ssh -4 -T -q -o StrictHostKeyChecking=no $server <<EOF 2>/dev/null
-  user=\$(sudo /scripts/whoowns "$domain")
-  if [[ -z "\$user" ]]; then
-    user=\$(sudo /scripts/whoowns "${domain#*.}")
-  fi
-  [[ -z "\$user" ]] && echo "The domain was not found on the server" && exit 1
-  sudo whmapi1 create_user_session user=\$user service=cpaneld | grep -o 'https://[^ ]*'
-  sudo /scripts/whmlogin
-EOF
-else
-  timeout 2 ssh -4 -T -q -o StrictHostKeyChecking=no root@$server -p 4001 <<EOF 2>/dev/null
-  user=\$(sudo /scripts/whoowns "$domain")
-  if [[ -z "\$user" ]]; then
-    user=\$(sudo /scripts/whoowns "${domain#*.}")
-  fi
-  [[ -z "\$user" ]] && echo "The domain was not found on the server" && exit 1
-  sudo whmapi1 create_user_session user=\$user service=cpaneld | grep -o 'https://[^ ]*'
-  sudo /scripts/whmlogin
-EOF
-fi
-}
-
 #######################################################################
 #                   COLOURING AND GREP VARIABLES                      #
 #######################################################################
 
-#--! THE FDQNS LISTED BELOW ARE USED BY VENTRAIP AUSTRALIA AND
-#--! SYNERGY WHOLESALE FOR THEIR SERVER HOSTNAMES WHICH ARE SUBDOMAINS ON THEM
+#--! THE VARIABLES LISTED BELOW CAN BE UPDATED TO A LIST OF FDQNS TO COLOUR OUTPUT DEPENDING ON USER REQUIREMENTS
 #--! THEY CAN BE UPDATED TO SUIT WHAT THE USER REQUIRES OR REMOVED OUTRIGHT
 
 # Colouring
@@ -59,56 +30,19 @@ RED='\e[91m'
 END='\e[0m'
 
 # DNS servers
-nameservers_check="ns[1-3].hosting-services.net.au
-ns[1-3].ventraip.net.au
-ns[1-2].syd[1-6].hostingplatform.net.au
-ns[1-2].syd[1-6].hostyourservices.net
-ns[1-3].nameserver.net.au
-ns[1-2].zuver.net.au
-ns[1-3].ventraip.net.au
-ns[1-2].syd[1-6].zuver.hosting
-ns[1-3].netvirtue.com.au
-ns[1-3].hosting-service.net.au
-ns[1-3].cpcloud.com.au"
+nameservers_check=""
 
 # Active Hosting Servers
-goodhosting_check="hostingplatform.net.au
-hostyourservices.net
-c[1-8]s[1-4]-[3-4]m-(syd|mel).hosting-services.net.au
-rh[1-2].cpcloud.com.au
-r[1-9][1-3]?.cpcloud.com.au"
-
-selecthosting_check="hostingplatform.net.au
-hostyourservices.net"
-
-# For the sake of consistency and my sanity this had to be seperate for the colouring
-goodhosting_grep="hostingplatform.net.au
-hostyourservices.net
-hosting-services.net.au
-cpcloud.com.au
-email-hosting.net.au
-ax.email"
+goodhosting_check=""
 
 # Shut-down Legacy Servers
-badhosting_check="c[1-8]s[1-4]-[1-4]e-(mel|syd).hosting-services.net.au
-b[1-4]s[1-4]-[1-3]b-(mel|syd).hosting-services.net.au
-cw[1-6].cpcloud.com.au
-s[1-9][1-2]?.cpcloud.com.au
-b[1-9][1-2]?.cpcloud.com.au
-e1.cpcloud.com.au
-w[1-2].cpcloud.com.au"
+badhosting_check=""
 
 # Email servers
-spf_check="spf.hostyourservices.net
-spf.ax.email
-spf.hostingplatform.net.au
-spf.vps.hostingplatform.net.au
-spf.email-hosting.net.au
-spf.hostedmail.net.au
-spf.synergywholesale.com"
+spf_check=""
 
-# Bad SPF lookups (used for a Legacy check)
-badspf_check="spf.hostedmail.net.au"
+# Bad SPF lookups (used for Legacy checks)
+badspf_check=""
 
 #######################################################################
 #                            SCRIPT START                             #
@@ -520,7 +454,7 @@ function dns_info () {
       if [[ -z $server_host_di ]]; then
         for var in ${resolving_record_A[@]}; do
           echo -e "${var} >> $(dig +short -x $var)" \
-          | GREP_COLOR='01;32' egrep "$goodhosting_grep|$" | sed -r 's|(.*)|  \1|'
+          | GREP_COLOR='01;32' egrep "$goodhosting_check|$" | sed -r 's|(.*)|  \1|'
         done
       else
         for var in ${resolving_record_A[@]}; do
@@ -540,7 +474,7 @@ function dns_info () {
       wwwInfo="www.${domain} >> ${resolving_record_WWW}"
       newWwwInfo="$(echo $wwwInfo | tr '\n' ' >> ')" # Stop it going over multiple lines
       if [[ -z $server_www_host_di ]]; then
-        echo -e "  $newWwwInfo>> $(cat server_www_host_di)" | GREP_COLOR='01;32' egrep "$goodhosting_grep|$"
+        echo -e "  $newWwwInfo>> $(cat server_www_host_di)" | GREP_COLOR='01;32' egrep "$goodhosting_check|$"
       else
         echo -e "  $newWwwInfo" | GREP_COLOR='01;31' egrep "$badhosting_check|$"
         echo -e "  ${RED}DECOMISSIONED LEGACY SERVER!${END}"
@@ -564,7 +498,7 @@ function dns_info () {
         mxInfo="${line} >> $mailServerIP >> $mailServerIpPTR"
         newMxInfo="$(echo $mxInfo | tr '\n' ' >> ')" # Stop it going over multiple lines
         if [[ -z $mail_host_di ]]; then
-          echo -e "${newMxInfo}" | GREP_COLOR='01;32' egrep "$goodhosting_grep|$" | sed -r 's|(.*)|  \1|'
+          echo -e "${newMxInfo}" | GREP_COLOR='01;32' egrep "$goodhosting_check|$" | sed -r 's|(.*)|  \1|'
         else
           echo -e "${newMxInfo}" | GREP_COLOR='01;31' egrep "$badhosting_check|$" | sed -r 's|(.*)|  \1|'
           echo -e "  ${RED}DECOMISSIONED LEGACY SERVER!${END}"
@@ -603,50 +537,13 @@ function dns_info () {
     fi
     echo -e "\n${YELLOW}TXT RECORD(s)${END}"
     txtDig=$(dig +short $domain $nameserver TXT)
-    viphost_check=$(egrep "hostingplatform.net.au" server_host_di)
-    synhost_check=$(egrep "hostyourservices.net" server_host_di)
-    vipmail_check=$(egrep "hostingplatform.net.au" mail_host_di)
-    synmail_check=$(egrep "hostyourservices.net" mail_host_di)
-    dediemail_check=$(egrep "email-hosting.net.au|ax.email" MX_lookup_di)
-    spf_check1=$(egrep "$selecthosting_check" server_host_di)
-    spf_check2=$(egrep "$selecthosting_check" mail_host_di)
+    spf_check1=$(egrep "$goodhosting_check" server_host_di)
+    spf_check2=$(egrep "$goodhosting_check" mail_host_di)
     if [[ -z $txtDig ]]; then
       echo -e "  ${RED}DOES NOT RESOLVE!${END}\n"
     else
-      if [[ -z $mail_host_di ]] || [[ -z $server_host_di ]]; then
-        if ! [[ -z $dediemail_check ]] && ! [[ -z $synhost_check ]]; then
-          echo -e "$txtDig" | GREP_COLOR='01;32' egrep -a "$spf_check|$" \
-          | GREP_COLOR='01;31' egrep -a "$badspf_check|spf.hostingplatform.net.au|$" | sed -r 's|(.*)|  \1|'
-        elif ! [[ -z $dediemail_check ]] && ! [[ -z $viphost_check ]]; then
-          echo -e "$txtDig" | GREP_COLOR='01;32' egrep -a "$spf_check|$" \
-          | GREP_COLOR='01;31' egrep -a "$badspf_check|spf.hostyourservices.net|$" | sed -r 's|(.*)|  \1|'
-        elif ! [[ -z $dediemail_check ]]; then
-          echo -e "$txtDig" | GREP_COLOR='01;32' egrep -a "$spf_check|$" \
-          | GREP_COLOR='01;31' egrep -a "$badspf_check|spf.hostyourservices.net|spf.hostingplatform.net.au|$" \
-          | sed -r 's|(.*)|  \1|'
-        elif ! [[ -z $synhost_check ]] || ! [[ -z $synmail_check ]]; then
-          if ! [[ -z $spf_check1 ]] || ! [[ -z $spf_check2 ]]; then
-            echo -e "$txtDig" | GREP_COLOR='01;32' egrep -a "$spf_check|$" \
-            | GREP_COLOR='01;31' egrep -a "$badspf_check|spf.hostingplatform.net.au|$" | sed -r 's|(.*)|  \1|'
-          else
-            echo -e "$txtDig" | GREP_COLOR='01;32' egrep -a "$spf_check|$" \
-            | GREP_COLOR='01;31' egrep -a "spf.hostingplatform.net.au|$" | sed -r 's|(.*)|  \1|'
-          fi
-        elif ! [[ -z $viphost_check ]] || ! [[ -z $vipmail_check ]]; then
-          if ! [[ -z $spf_check1 ]] || ! [[ -z $spf_check2 ]]; then
-            echo -e "$txtDig" | GREP_COLOR='01;32' egrep -a "$spf_check|$" \
-            | GREP_COLOR='01;31' egrep -a "$badspf_check|spf.hostyourservices.net|$" | sed -r 's|(.*)|  \1|'
-          else
-            echo -e "$txtDig" | GREP_COLOR='01;32' egrep -a "$spf_check|$" \
-            | GREP_COLOR='01;31' egrep -a "spf.hostyourservices.net|$" | sed -r 's|(.*)|  \1|'
-          fi
-        else
-          echo -e "$txtDig" | GREP_COLOR='01;32' egrep -a "$spf_check|$" | sed -r 's|(.*)|  \1|'
-        fi
-      else
-        echo -e "$txtDig" | GREP_COLOR='01;32' egrep -a "$spf_check|$" \
-        | GREP_COLOR='01;31' egrep -a "$badspf_check" | sed -r 's|(.*)|  \1|'
-      fi
+      echo -e "$txtDig" | GREP_COLOR='01;32' egrep -a "$spf_check|$" \
+      | GREP_COLOR='01;31' egrep -a "$badspf_check|$" | sed -r 's|(.*)|  \1|'
     fi
     if ! [[ -z $server_host_di ]] || ! [[ -z $mail_host_di ]]; then
       echo -e "\n${YELLOW}WARNING${END}"
@@ -683,29 +580,30 @@ function dns_info () {
 #######################################################################
 
 function management_urls () {
- if [ $quick = false ]; then
-   PTR_record_A=$(egrep --colour=never "$goodhosting_check" server_host_di)
-   PTR_record_AAAA=$(egrep --colour=never "$goodhosting_check" server_AAAA_host_di)
-   PTR_record_WWW=$(egrep --colour=never "$goodhosting_check" server_www_host_di)
-   PTR_record_MX=$(egrep --colour=never "$goodhosting_check" mail_host_di)
-   PTR_record_SOA=$(awk '{print $2}' SOA_lookup_di | sed -r 's|root.||g' | egrep --colour=never "$goodhosting_check")
-   # Checks if the server the records are resolving to are ours
-   if ! [[ -z $PTR_record_A ]]; then
-     int_serv=$PTR_record_A
-   elif ! [[ -z $PTR_record_AAAA ]]; then
-     int_serv=$PTR_record_AAAA
-   elif ! [[ -z $PTR_record_WWW ]]; then
-     int_serv=$PTR_record_WWW
-   elif ! [[ -z $PTR_record_MX ]]; then
-     int_serv=$PTR_record_MX
-   elif ! [[ -z $PTR_record_SOA ]]; then
-     int_serv=$PTR_record_SOA
-   fi
-   if ! [ -z $int_serv ]; then
-     # Creates cPanel & WHM login links if the cPanel server is ours
-     get_urls $domain $int_serv > cpanel_output_di
-   fi
- fi
+#--! NO LONGER USABLE
+# if [ $quick = false ]; then
+#   PTR_record_A=$(egrep --colour=never "$goodhosting_check" server_host_di)
+#   PTR_record_AAAA=$(egrep --colour=never "$goodhosting_check" server_AAAA_host_di)
+#   PTR_record_WWW=$(egrep --colour=never "$goodhosting_check" server_www_host_di)
+#   PTR_record_MX=$(egrep --colour=never "$goodhosting_check" mail_host_di)
+#   PTR_record_SOA=$(awk '{print $2}' SOA_lookup_di | sed -r 's|root.||g' | egrep --colour=never "$goodhosting_check")
+#   # Checks if the server the records are resolving to are ours
+#   if ! [[ -z $PTR_record_A ]]; then
+#     int_serv=$PTR_record_A
+#   elif ! [[ -z $PTR_record_AAAA ]]; then
+#     int_serv=$PTR_record_AAAA
+#   elif ! [[ -z $PTR_record_WWW ]]; then
+#     int_serv=$PTR_record_WWW
+#   elif ! [[ -z $PTR_record_MX ]]; then
+#     int_serv=$PTR_record_MX
+#   elif ! [[ -z $PTR_record_SOA ]]; then
+#     int_serv=$PTR_record_SOA
+#   fi
+#   if ! [ -z $int_serv ]; then
+#     # Creates cPanel & WHM login links if the cPanel server is ours
+#     get_urls $domain $int_serv > cpanel_output_di
+#   fi
+# fi
  # WHOIS Information we need for the Synergy URL
  while [ -e /proc/$WhoIS ]; do sleep 0.02 ; done
  registrar_check=$(grep -i --colour=never 'Synergy Wholesale' whois_output_di 2>/dev/null)
@@ -715,21 +613,6 @@ function management_urls () {
    if [[ -n $registrar_check ]]; then
      echo -e "\n  ${YELLOW}SYNERGY MANAGEMENT URL${END}"
      echo -e "  https://manage.synergywholesale.com/home/search?s=~$domain"
-   fi
-   # Creates cPanel & WHM login links if the cPanel server is ours
-   if [[ -s cpanel_output_di ]]; then
-     # Sets the URLs grabbed as variables to use later
-     cpanel_link=$(grep ":2083" cpanel_output_di)
-     whm_link=$(grep ":2087" cpanel_output_di)
-     # Hyperlinks the URL so its CLEAN
-     if ! [[ -z $cpanel_link ]]; then
-       echo -e "\n  ${YELLOW}CPANEL URL${END}"
-       echo -e "  $cpanel_link"
-     fi
-     if ! [[ -z $whm_link ]]; then
-       echo -e "\n  ${YELLOW}WHM URL${END}"
-       echo -e "  $whm_link"
-     fi
    fi
  fi
 }
