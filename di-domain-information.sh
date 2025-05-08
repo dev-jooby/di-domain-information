@@ -578,9 +578,8 @@ function dns_info () {
 #######################################################################
 #  Generates cPanel/WHM one-click logins and a Synergy Management URL #
 #######################################################################
-
-function management_urls () {
 #--! NO LONGER USABLE
+# function management_urls () {
 # if [ $quick = false ]; then
 #   PTR_record_A=$(egrep --colour=never "$goodhosting_check" server_host_di)
 #   PTR_record_AAAA=$(egrep --colour=never "$goodhosting_check" server_AAAA_host_di)
@@ -604,26 +603,26 @@ function management_urls () {
 #     get_urls $domain $int_serv > cpanel_output_di
 #   fi
 # fi
-#--!
- # WHOIS Information we need for the Synergy URL
- while [ -e /proc/$WhoIS ]; do sleep 0.02 ; done
- registrar_check=$(grep -i --colour=never 'Synergy Wholesale' whois_output_di 2>/dev/null)
- if [[ -s cpanel_output_di ]] || [[ -n $registrar_check ]]; then
-   echo -e "\n${YELLOW}MANAGEMENT URL(s) ${END}"
-   # Hyperlinks a Synergy URL if the domains registrar is listed as Synergy Wholesale
-   if [[ -n $registrar_check ]]; then
-     echo -e "\n  ${YELLOW}SYNERGY MANAGEMENT URL${END}"
-     echo -e "  https://manage.synergywholesale.com/home/search?s=~$domain"
-   fi
- fi
+#
+# # WHOIS Information we need for the Synergy URL
+# while [ -e /proc/$WhoIS ]; do sleep 0.02 ; done
+# registrar_check=$(grep -i --colour=never 'Synergy Wholesale' whois_output_di 2>/dev/null)
+# if [[ -s cpanel_output_di ]] || [[ -n $registrar_check ]]; then
+#   echo -e "\n${YELLOW}MANAGEMENT URL(s) ${END}"
+#   # Hyperlinks a Synergy URL if the domains registrar is listed as Synergy Wholesale
+#   if [[ -n $registrar_check ]]; then
+#     echo -e "\n  ${YELLOW}SYNERGY MANAGEMENT URL${END}"
+#     echo -e "  https://manage.synergywholesale.com/home/search?s=~$domain"
+#   fi
+# fi
 }
-
+#--!
 #######################################################################
 #          Puts it all together and prints output all at once         #
 #######################################################################
 
 # Runs all the different functions at once in the background - this significantly improves the time to execute the whole script
-management_urls > management_urls_output_di & End1=$!
+#management_urls > management_urls_output_di & End1=$!
 whois_info > whois_info_output_di & End2=$!
 reg_info > reg_info_output_di $ End3=$!
 dns_info > dns_info_output_di & End4=$!
@@ -633,7 +632,7 @@ output_files=(
   whois_info_output_di
   reg_info_output_di
   dns_info_output_di
-  management_urls_output_di
+#  management_urls_output_di
 )
 clear
 echo
